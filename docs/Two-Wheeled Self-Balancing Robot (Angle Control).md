@@ -1,47 +1,80 @@
-# **Two-Wheeled Self-Balancing Robot (Angle Control)**
+# **Self-Balancing Robot Documentation**
 
-This project implements a classic two-wheeled inverted pendulum using an **Arduino Uno/Nano** microcontroller. It utilizes the **MPU6050's Digital Motion Processor (DMP)** for precise angle reading (sensor fusion) and a **PID (Proportional-Integral-Derivative) control loop** to maintain vertical balance.
+This document provides technical specifications, wiring guides, and a software overview for a self-balancing robot utilizing an Arduino-compatible microcontroller, an MPU6050 Inertial Measurement Unit (IMU), and an L298N motor driver. The control system relies on a Proportional-Integral-Derivative (PID) controller for stability.
 
-This version focuses strictly on **Angle Control** and does not include motor encoder feedback (velocity/position control).
+## **1\. Hardware Requirements and Specifications**
 
-## **⚙️ Hardware Components**
+The robot is designed to operate on a 12V power supply, which typically powers the motors through the L298N driver.
 
-* **Microcontroller:** Arduino Uno or Nano  
-* **IMU Sensor:** MPU6050 (Accelerometer \+ Gyroscope, utilizing DMP)  
-* **Motor Driver:** L298N Dual H-Bridge Module  
-* **Motors:** 2 x 12V DC Geared Motors  
-* **Power:** 12V Li-ion or Li-Po Battery Pack
-
-## **🔌 Wiring Setup (L298N H-Bridge)**
-
-This wiring setup is essential for connecting the **MPU6050** and the **L298N** motor driver to the Arduino.
-
-| Component Pin | Arduino Pin / Connection | Notes |
+| Component | Function | Notes |
 | :---- | :---- | :---- |
-| **MPU6050 SDA** | **A4** | I2C Data Line |
-| **MPU6050 SCL** | **A5** | I2C Clock Line |
-| **MPU6050 INT** | **D2** | External Interrupt 0 (Required for fast DMP data) |
-| **L298N ENA (Left PWM)** | **D5** | Left Motor Speed Control (PWM) |
-| **L298N ENB (Right PWM)** | **D10** | Right Motor Speed Control (PWM) |
-| **L298N IN1, IN2, IN3, IN4** | **D6, D7, D12, D11** | Direction Control |
-| **L298N 12V VMS** | **12V Battery Positive** | Motor Power Supply |
-| **L298N GND** | **12V Battery Negative / Arduino GND** | Common Ground |
+| **Microcontroller** | Arduino Nano / Uno | The brain; runs the PID control loop. |
+| **IMU** | MPU6050 (Accelerometer/Gyro) | Provides the robot's angle (input for PID). Uses I2C communication. |
+| **Motor Driver** | L298N H-Bridge | Controls the speed and direction of two DC motors. Requires PWM inputs. |
+| **Power Supply** | 12V Battery/Adapter | Powers the L298N module (and potentially the Arduino via the driver's onboard regulator). |
+| **Motors** | 2x DC Gear Motors | Geared motors suitable for 12V operation. |
+| **Wheels** | 2x Wheels | Appropriate size for the motor shaft. |
 
-## **💻 Software & Libraries**
+## **2\. Wiring and Pin Mapping**
 
-The sketch requires two essential libraries installed via the Arduino IDE's Library Manager:
+The provided sketch uses specific digital pins on the Arduino for communication and motor control.
 
-1. **I2Cdevlib (by Jeff Rowberg):** Contains the necessary files (I2Cdev.h, MPU6050\_6Axis\_MotionApps20.h) to utilize the **MPU6050's DMP** for fused angle calculation.  
-2. **Arduino PID Library (by Brett Beauregard):** Provides the robust PID\_v1.h control loop implementation.
+### **MPU6050 (I2C Communication)**
 
-## **🛠️ Calibration & Tuning**
+| MPU6050 Pin | Arduino Pin | Function |
+| :---- | :---- | :---- |
+| VCC | 5V | Power |
+| GND | GND | Ground |
+| SCL | A5 | I2C Clock |
+| SDA | A4 | I2C Data |
+| **INT** | **D2** | **External Interrupt (Critical for DMP)** |
 
-The robot's stability relies entirely on tuning the PID loop and setting the correct angle **Setpoint**.
+### **L298N Motor Driver**
 
-1. **Setpoint Determination:** Before enabling PID, determine the **precise angle** at which your robot stands perfectly vertical. The code currently uses 183.67, which should be adjusted after you measure your own stable reading using the Serial Monitor.  
-2. **PID Tuning (Trial and Error):** Tune the constants sequentially:  
-   * **Kp (Proportional \- Authority):** Start low and increase until the robot begins to oscillate (wobble quickly). This sets the basic responsiveness.  
-   * **Kd (Derivative \- Damping):** Increase this value to aggressively reduce the fast oscillations caused by Kp, making the movement smoother.  
-   * **Ki (Integral \- Drift Correction):** Increase this slowly to ensure the robot eliminates any long-term drift and holds the setpoint precisely.
+The motor driver uses six digital pins for control, with the speed pins requiring **PWM (Pulse Width Modulation)** capability.
 
-Current starting values in self\_balancing\_bot.ino are: Kp=45, Kd=3.5, Ki=100.
+| L298N Pin | Arduino Pin | Sketch \#define | Function |
+| :---- | :---- | :---- | :---- |
+| **ENA** | **D5** (PWM) | ENA\_PWM | Left Motor Speed |
+| **IN1** | D6 | IN1 | Left Motor Direction 1 |
+| **IN2** | D7 | IN2 | Left Motor Direction 2 |
+| **ENB** | **D9** (PWM) | ENB\_PWM | Right Motor Speed |
+| **IN3** | D10 | IN3 | Right Motor Direction 1 |
+| **IN4** | D11 | IN4 | Right Motor Direction 2 |
+
+**Note:** The L298N is powered directly by the 12V supply. Ensure the driver's power jumper is correctly set to power the Arduino's 5V line, or power the Arduino separately.
+
+## **3\. Software Overview and Control System**
+
+The core of the robot's stability is the **PID Controller**, which attempts to maintain a setpoint (the perfect upright angle) by adjusting the motor speed (output) based on the current angle (input).
+
+### **3.1. Required Libraries**
+
+1. **Wire.h:** For I2C communication with the MPU6050.  
+2. **I2Cdev.h** and **MPU6050\_6Axis\_MotionApps20.h:** The official I2Cdevlib libraries for the MPU6050, specifically utilizing the **DMP (Digital Motion Processor)** for highly accurate angle calculation.  
+3. **PID\_v1.h:** The standard PID library used to calculate the necessary motor response.
+
+### **3.2. Critical PID Tuning Parameters**
+
+Tuning these four values in the MPUTrial.ino sketch is the most critical step for achieving stable balancing.
+
+| Variable | Value (Current) | Description |
+| :---- | :---- | :---- |
+| setpoint | 180.1 | **The Target Angle.** This is the angle (in degrees, offset to be 0-360) where the robot is perfectly upright. This value **MUST** be calibrated for your specific robot. |
+| Kp | 23 | **Proportional Gain.** Responds to the *current* error. Too high: fast corrections, but severe oscillations. |
+| Ki | 140 | **Integral Gain.** Responds to the *accumulated* error over time (long-term drift). Corrects slow drift, but too high causes overshoot and sustained oscillation. |
+| Kd | 0.9 | **Derivative Gain.** Responds to the *rate of change* of the error. Dampens oscillations and slows the robot down as it approaches the setpoint. |
+
+### **3.3. Control Loop Breakdown**
+
+The control system operates on an interrupt-driven model, which is highly efficient.
+
+| Function/Code Section | Description |
+| :---- | :---- |
+| **dmpDataReady()** | This interrupt function runs every time the MPU6050 has new data ready, setting the mpuInterrupt flag. |
+| **MPU Data Read** | In the loop(), new MPU data is read from the FIFO buffer only after the interrupt flag is set. The robot's angle is calculated from the quaternion and gravity vector using mpu.dmpGetYawPitchRoll(ypr, \&q, \&gravity);. |
+| **Input Calculation** | input \= ypr\[2\] \* 180 / M\_PI \+ 180; calculates the angle. **It uses the Roll angle (ypr\[2\])**, which suggests the motors are mounted to compensate for side-to-side tilt (the axis the robot rolls on). The \+ 180 centers the value around the upright setpoint of 180 degrees. |
+| **PID Compute** | pid.Compute(); is called continuously. It takes the difference between input (current angle) and setpoint (target angle) and generates the output value. |
+| **setMotorSpeed()** | This function handles the PID output: **1\. Direction:** If output is positive, the motors drive "Forward" to push the top back up. If negative, they drive "Reverse" to catch the fall. **2\. Speed:** abs(output) is written to the L298N ENA/ENB pins using analogWrite() (PWM). |
+| **Serial Output** | Serial.print(input); Serial.print(" \=\>"); Serial.println(output); provides critical debugging feedback, showing the current angle and the motor power being applied. |
+
