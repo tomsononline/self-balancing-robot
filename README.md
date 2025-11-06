@@ -57,4 +57,4 @@ The stability requires careful tuning of these constants:
 
 For a comprehensive technical breakdown of the code logic, control theory, and hardware specifics, refer to:
 
-* [**Detailed Technical Documentation**](https://github.com/tomsononline/self-balancing-robot/blob/main/docs/Two-Wheeled%20Self-Balancing%20Robot%20(Angle%20Control).md))
+* [**Detailed Technical Documentation**](https://github.com/tomsononline/self-balancing-robot/blob/main/docs/Two-Wheeled%20Self-Balancing%20Robot%20(Angle%20Control).md)
